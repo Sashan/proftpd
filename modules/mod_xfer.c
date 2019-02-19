@@ -581,18 +581,32 @@ static int xfer_parse_cmdlist(const char *name, config_rec *c,
 }
 
 static int transmit_normal(pool *p, char *buf, size_t bufsz) {
-  long sz = pr_fsio_read(retr_fh, buf, bufsz);
+  long sz;
 
-  if (sz < 0) {
+  sz = pr_fsio_read(retr_fh, buf, bufsz);
+
+  while (sz < 0) {
     int xerrno = errno;
 
+    if (xerrno == EAGAIN || xerrno == EINTR) {
+	/*
+	 * We should not assume FSIO is always instant. If FS served by slow
+	 * storage the I/O might take several seconds (where several > 5).
+	 * The call to pr_fsio_read_with_error() might bail out upon
+	 * reception of alarm.
+	 */
+	errno = EINTR;
+	pr_signals_handle();
+        sz = pr_fsio_read(retr_fh, buf, bufsz);
+	continue;
+    }
     (void) pr_trace_msg("fileperms", 1, "RETR, user '%s' (UID %s, GID %s): "
       "error reading from '%s': %s", session.user,
       pr_uid2str(p, session.uid), pr_gid2str(p, session.gid),
       retr_fh->fh_path, strerror(xerrno));
 
     errno = xerrno;
-    return 0;
+    return -1;
   }
 
   if (sz == 0) {
@@ -1683,8 +1697,9 @@ MODRET xfer_pre_appe(cmd_rec *cmd) {
 MODRET xfer_stor(cmd_rec *cmd) {
   const char *path;
   char *lbuf;
-  int bufsz, len, xerrno = 0, res;
+  int bufsz, xerrno = 0, res;
   off_t nbytes_stored, nbytes_max_store = 0;
+  ssize_t len, writen;
   unsigned char have_limit = FALSE;
   struct stat st;
   off_t curr_offset, curr_pos = 0;
@@ -1970,8 +1985,31 @@ MODRET xfer_stor(cmd_rec *cmd) {
       ftp_transfer_start(&proto);
     }
 #endif
+    writen = 0;
+    while (writen < len) {
+      res = pr_fsio_write(stor_fh, lbuf + writen, len - writen);
+      if (res < 0) {
+	int xerrno = errno;
+	if (xerrno == EAGAIN || xerrno == EINTR) {
+	  errno = EINTR;
+	  pr_signals_handle();
+	  continue;
+	}
+        (void) pr_trace_msg("fileperms", 1, "%s, user '%s' (UID %s, GID %s): "
+          "error writing to '%s': %s", (char *) cmd->argv[0], session.user,
+          pr_uid2str(cmd->tmp_pool, session.uid),
+          pr_gid2str(cmd->tmp_pool, session.gid), stor_fh->fh_path,
+          strerror(xerrno));
 
-    res = pr_fsio_write(stor_fh, lbuf, len);
+        stor_abort();
+        pr_data_abort(xerrno, FALSE);
+
+        pr_cmd_set_errno(cmd, xerrno);
+        errno = xerrno;
+        return PR_ERROR(cmd);
+      }
+      writen += res;
+    }
 
 #ifdef _SOLARIS_DTRACE
     if (ftp_transfer_done_enabled() && res == len) {
@@ -1980,27 +2018,6 @@ MODRET xfer_stor(cmd_rec *cmd) {
       ftp_transfer_done(&proto);
     }
 #endif
-
-    if (res != len) {
-      xerrno = EIO;
-
-      if (res < 0) {
-        xerrno = errno;
-      }
-
-      (void) pr_trace_msg("fileperms", 1, "%s, user '%s' (UID %s, GID %s): "
-        "error writing to '%s': %s", (char *) cmd->argv[0], session.user,
-        pr_uid2str(cmd->tmp_pool, session.uid),
-        pr_gid2str(cmd->tmp_pool, session.gid), stor_fh->fh_path,
-        strerror(xerrno));
-
-      stor_abort();
-      pr_data_abort(xerrno, FALSE);
-
-      pr_cmd_set_errno(cmd, xerrno);
-      errno = xerrno;
-      return PR_ERROR(cmd);
-    }
 
     /* If no throttling is configured, this does nothing. */
     pr_throttle_pause(nbytes_stored, FALSE);
