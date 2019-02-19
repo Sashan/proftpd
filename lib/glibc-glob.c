@@ -40,6 +40,15 @@ char *alloca ();
 #define MAX_RECURSION 	PR_TUNABLE_GLOBBING_MAX_RECURSION
 #define MAX_RESULTS	PR_TUNABLE_GLOBBING_MAX_MATCHES
 
+unsigned long GlobMaxResults = 0;
+
+static unsigned long get_globmaxresults(void)
+{
+  if (GlobMaxResults > 0)
+    return GlobMaxResults;
+  return MAX_RESULTS;
+}
+
 /* Enable GNU extensions in glob.h.  */
 #ifndef _GNU_SOURCE
 # define _GNU_SOURCE	1
@@ -238,8 +247,6 @@ extern void bcopy ();
 # undef  mempcpy
 # define mempcpy(Dest, Src, Len) __mempcpy (Dest, Src, Len)
 #endif
-
-static unsigned long nbresults;
 
 #ifndef	__GNU_LIBRARY__
 # ifdef	__GNUC__
@@ -1157,7 +1164,6 @@ int
 glob (const char *pattern, int flags, int (*errfunc) __P((const char *, int)),
     glob_t *pglob)
 {
-	nbresults = 0UL;
 	return glob_limited(0U, pattern, flags, errfunc, pglob);
 }
 
@@ -1318,6 +1324,7 @@ glob_in_dir (const char *pattern, const char *directory, int flags,
   size_t nfound;
   int meta;
   int save;
+  int ret_glob_limit = 0;
 
   meta = __glob_pattern_p (pattern, !(flags & GLOB_NOESCAPE));
   if (meta == 0 && (flags & (GLOB_NOCHECK|GLOB_NOMAGIC)))
@@ -1428,10 +1435,6 @@ glob_in_dir (const char *pattern, const char *directory, int flags,
 #endif
 		  if (d == NULL)
 		    break;
-		  if (nbresults > MAX_RESULTS) {	
-			  break;
-		  }
-		  nbresults++;	
 		  if (! REAL_DIR_ENTRY (d))
 		    continue;
 
@@ -1463,6 +1466,14 @@ glob_in_dir (const char *pattern, const char *directory, int flags,
 		      new->next = names;
 		      names = new;
 		      ++nfound;
+
+		      if (nfound > get_globmaxresults()) {
+                        for (; names != NULL; names = names->next)
+                          free(names->name);
+                        nfound = 0;
+		        ret_glob_limit = 1;
+		        break;
+		      }
 		    }
 		}
 	    }
@@ -1515,6 +1526,9 @@ glob_in_dir (const char *pattern, const char *directory, int flags,
 	closedir ((DIR *) stream);
     }
   __set_errno (save);
+
+  if (ret_glob_limit)
+    return GLOB_LIMIT;
 
   return nfound == 0 ? GLOB_NOMATCH : 0;
 

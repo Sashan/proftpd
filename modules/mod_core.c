@@ -1048,6 +1048,26 @@ MODRET set_maxconnrate(cmd_rec *cmd) {
   return PR_HANDLED(cmd);
 }
 
+extern unsigned long GlobMaxResults;
+
+MODRET set_globmaxresults(cmd_rec *cmd) {
+  unsigned long max;
+  char *endp;
+
+  CHECK_ARGS(cmd,1);
+  CHECK_CONF(cmd,CONF_ROOT);
+
+  max = strtoul(cmd->argv[1], &endp, 10);
+
+  if ((endp && *endp) || max == 0)
+    CONF_ERROR(cmd, "argument must be greater than 0");
+
+  pr_log_debug(DEBUG1, "setting GlobMaxResults to %lu", max);
+
+  GlobMaxResults = max;
+  return PR_HANDLED(cmd);
+}
+
 MODRET set_timeoutidle(cmd_rec *cmd) {
   int timeout = -1;
   config_rec *c = NULL;
@@ -6939,8 +6959,8 @@ static conftable core_conftab[] = {
   { "DisplayConnect",		set_displayconnect,		NULL },
   { "DisplayQuit",		set_displayquit,		NULL },
   { "From",			add_from,			NULL },
-  { "FSCachePolicy",		set_fscachepolicy,		NULL },
-  { "FSOptions",		set_fsoptions,			NULL },
+  { "GlobMaxResults",		set_globmaxresults,	        NULL },
+  { "Group",			set_group, 			NULL },
   { "Group",			set_group, 			NULL },
   { "GroupOwner",		add_groupowner,			NULL },
   { "HideFiles",		set_hidefiles,			NULL },
