@@ -24,7 +24,12 @@
 
 /* Inet API tests */
 
+#include <stdlib.h>
+
 #include "tests.h"
+
+#define	TEST_HOST	((getenv("TEST_HOST") == NULL) ? \
+			    "8.8.8.8" : getenv("TEST_HOST"))
 
 static pool *p = NULL;
 
@@ -524,8 +529,8 @@ START_TEST (inet_connect_ipv4_test) {
 
   /* Try connecting to Google's DNS server. */
 
-  addr = pr_netaddr_get_addr(p, "8.8.8.8", NULL);
-  fail_unless(addr != NULL, "Failed to resolve '8.8.8.8': %s",
+  addr = pr_netaddr_get_addr(p, TEST_HOST, NULL);
+  fail_unless(addr != NULL, "Failed to resolve '%s': %s", TEST_HOST,
     strerror(errno));
 
   res = pr_inet_connect(p, conn, addr, 53);
@@ -543,10 +548,11 @@ START_TEST (inet_connect_ipv4_test) {
   fail_unless(conn != NULL, "Failed to create conn: %s", strerror(errno));
 
   res = pr_inet_connect(p, conn, addr, 53);
-  fail_if(res < 0, "Failed to connect to 8.8.8.8#53: %s", strerror(errno));
+  fail_if(res < 0, "Failed to connect to %s#53: %s", TEST_HOST,
+    strerror(errno));
 
   res = pr_inet_connect(p, conn, addr, 53);
-  fail_unless(res < 0, "Failed to connect to 8.8.8.8#53: %s",
+  fail_unless(res < 0, "Failed to connect to %s#53: %s", TEST_HOST,
     strerror(errno));
   fail_unless(errno == EISCONN, "Expected EISCONN (%d), got %s (%d)",
     EISCONN, strerror(errno), errno);
@@ -652,13 +658,13 @@ START_TEST (inet_connect_nowait_test) {
   /* Try connecting to Google's DNS server. */
 
   addr = pr_netaddr_get_addr(p, "8.8.8.8", NULL);
-  fail_unless(addr != NULL, "Failed to resolve '8.8.8.8': %s",
+  fail_unless(addr != NULL, "Failed to resolve '%s': %s", TEST_HOST,
     strerror(errno));
 
   res = pr_inet_connect_nowait(p, conn, addr, 53);
   if (res < 0 &&
       errno != ECONNREFUSED) {
-    fail_unless(res != -1, "Failed to connect to 8.8.8.8#53: %s",
+    fail_unless(res != -1, "Failed to connect to '%s'#53: %s", TEST_HOST,
       strerror(errno));
   }
 
