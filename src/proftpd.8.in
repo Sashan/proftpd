@@ -109,9 +109,11 @@ This is enabled by default, if the \fB--enable-ipv6\fP configure option is
 used.
 .SH FILES
 .PD 0
-.B @SBINDIR@/proftpd
+.B /usr/lib/inet/proftpd
 .br
 .B @SYSCONFDIR@/proftpd.conf
+.br
+.B @SYSCONFDIR@/ftpusers
 .br
 .B @BINDIR@/ftpwho
 .br
