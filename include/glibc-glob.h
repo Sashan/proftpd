@@ -85,6 +85,7 @@ extern "C" {
 #define	GLOB_ABORTED	2	/* Read error.  */
 #define	GLOB_NOMATCH	3	/* No matches found.  */
 #define GLOB_NOSYS	4	/* Not implemented.  */
+#define GLOB_LIMIT	5       /* MAX_RESULTS limit reached */
 #ifdef _GNU_SOURCE
 /* Previous versions of this file defined GLOB_ABEND instead of
    GLOB_ABORTED.  Provide a compatibility definition here.  */
