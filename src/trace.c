@@ -32,6 +32,8 @@
 
 #ifdef PR_USE_TRACE
 
+unsigned char tracing_enabled = FALSE;
+
 static int trace_logfd = -1;
 static unsigned long trace_opts = PR_TRACE_OPT_DEFAULT;
 static pool *trace_pool = NULL;
@@ -472,6 +474,10 @@ int pr_trace_use_stderr(int use_stderr) {
 int pr_trace_msg(const char *channel, int level, const char *fmt, ...) {
   int res;
   va_list msg;
+
+  /* Optimization: do not run tracing code unless explicitly enabled. */
+  if (tracing_enabled == FALSE)
+    return 0;
 
   va_start(msg, fmt);
   res = pr_trace_vmsg(channel, level, fmt, msg);

@@ -38,6 +38,7 @@ extern xaset_t *server_list;
 /* From src/main.c */
 extern unsigned long max_connects;
 extern unsigned int max_connect_interval;
+extern unsigned char tracing_enabled;
 
 /* From modules/mod_site.c */
 extern modret_t *site_dispatch(cmd_rec*);
@@ -1378,6 +1379,8 @@ MODRET set_trace(cmd_rec *cmd) {
   register unsigned int i;
   int per_session = FALSE;
   unsigned int idx = 1;
+
+  tracing_enabled = TRUE;
 
   if (cmd->argc-1 < 1)
     CONF_ERROR(cmd, "wrong number of parameters");

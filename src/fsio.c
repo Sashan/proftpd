@@ -556,9 +556,11 @@ static fs_statcache_t statcache;
 static int cache_stat(pr_fs_t *fs, const char *path, struct stat *sbuf,
     unsigned int op) {
   int res = -1;
-  char pathbuf[PR_TUNABLE_PATH_MAX + 1] = {'\0'};
+  char pathbuf[PR_TUNABLE_PATH_MAX + 1];
   int (*mystat)(pr_fs_t *, const char *, struct stat *) = NULL;
   size_t pathlen;
+
+  (void) memset(pathbuf, '\0', sizeof(pathbuf));
 
   /* Sanity checks */
   if (fs == NULL) {
@@ -641,8 +643,8 @@ static pr_fs_t *lookup_file_canon_fs(const char *, char **, int);
  * during the hit.
  */
 static pr_fs_t *lookup_dir_fs(const char *path, int op) {
-  char buf[PR_TUNABLE_PATH_MAX + 1] = {'\0'};
-  char tmp_path[PR_TUNABLE_PATH_MAX + 1] = {'\0'};
+  char buf[PR_TUNABLE_PATH_MAX + 1];
+  char tmp_path[PR_TUNABLE_PATH_MAX + 1];
   pr_fs_t *fs = NULL;
   int exact = FALSE;
   size_t tmp_pathlen = 0;
@@ -650,6 +652,9 @@ static pr_fs_t *lookup_dir_fs(const char *path, int op) {
 #ifdef PR_FS_MATCH
   pr_fs_match_t *fsm = NULL;
 #endif /* PR_FS_MATCH */
+
+  (void) memset(buf, '\0', sizeof(buf));
+  (void) memset(tmp_path, '\0', sizeof(tmp_path));
 
   sstrncpy(buf, path, sizeof(buf));
 
