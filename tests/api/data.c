@@ -291,8 +291,13 @@ START_TEST (data_sendfile_test) {
   mark_point();
   res = pr_data_sendfile(fd, &offset, 1);
   fail_unless(res < 0, "Failed to handle bad file descriptor");
+#ifdef	SOLARIS2
+  fail_unless(errno == EINVAL, "Expected EINVAL (%d), got %s (%d)", EINVAL,
+    strerror(errno), errno);
+#else	/* !SOLARIS2 */
   fail_unless(errno == EBADF, "Expected EBADF (%d), got %s (%d)", EBADF,
     strerror(errno), errno);
+#endif	/* SOLARIS2 */
 
   fh = pr_fsio_open(data_test_path, O_CREAT|O_EXCL|O_WRONLY);
   fail_unless(fh != NULL, "Failed to open '%s': %s", data_test_path,
@@ -313,7 +318,8 @@ START_TEST (data_sendfile_test) {
   mark_point();
   res = pr_data_sendfile(fd, &offset, strlen(text));
   if (res < 0) {
-    fail_unless(errno == ENOTSOCK, "Expected ENOTSOCK (%d), got %s (%d)",
+    fail_unless(errno == ENOTSOCK || errno == EINVAL,
+      "Expected ENOTSOCK (%d) or EINVAL (%d), got %s (%d)", ENOTSOCK, EINVAL,
       ENOTSOCK, strerror(errno), errno);
   }
 
