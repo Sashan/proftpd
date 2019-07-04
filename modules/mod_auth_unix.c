@@ -1034,6 +1034,13 @@ MODRET pw_name2gid(cmd_rec *cmd) {
 
   return gr ? mod_create_data(cmd, (void *) &gr->gr_gid) : PR_DECLINED(cmd);
 }
+#ifdef HAVE__GETGRPSBYMEMBER
+  extern int _getgroupsbymember
+  (
+	const char* username, gid_t gid_array[],
+	int maxgids, int numgids
+  ); 
+#endif /* HAVE__GETGRPSBYMEMBER */
 
 /* cmd->argv[0] = name
  * cmd->argv[1] = (array_header **) group_ids
@@ -1211,7 +1218,40 @@ MODRET pw_getgroups(cmd_rec *cmd) {
     }
 
     free(ptr);
-#else
+#else /* !HAVE_GETGRSET */
+#ifdef HAVE__GETGRPSBYMEMBER
+    gid_t group_ids[NGROUPS_MAX];
+    int ngroups = NGROUPS_MAX;
+    register unsigned int i;
+
+    pr_trace_msg("auth", 4,
+      "using _getgroupsbymember() to look up group membership");
+
+    memset(group_ids, 0, sizeof(group_ids));
+
+    group_ids[0]=pw->pw_gid;
+    ngroups=
+      _getgroupsbymember(pw->pw_name, group_ids, NGROUPS_MAX, 1);
+
+    if (ngroups < 0) {
+	pr_log_pri(PR_LOG_ERR,
+	    "_getgroupsbymember error: %s", strerror(errno));
+	return PR_DECLINED(cmd);
+    }
+
+    for (i = 0; i < ngroups; i++) {
+      gr = my_getgrgid(group_ids[i]);
+      if (gr) {
+        if (gids && pw->pw_gid != gr->gr_gid)
+          *((gid_t *) push_array(gids)) = gr->gr_gid;
+
+        if (groups && pw->pw_gid != gr->gr_gid) {
+          *((char **) push_array(groups)) = pstrdup(session.pool,
+            gr->gr_name);
+        }
+      }
+    }
+#else /* !HAVE__GETGRPSBYMEMBER */
     char **gr_member = NULL;
     size_t pw_namelen;
 
@@ -1239,6 +1279,7 @@ MODRET pw_getgroups(cmd_rec *cmd) {
         }
       }
     }
+#endif /* !HAVE__GETGROUPSBYMEMBER */
 #endif /* !HAVE_GETGRSET */
   }
 
