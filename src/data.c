@@ -1535,6 +1535,9 @@ pr_sendfile_t pr_data_sendfile(int retr_fd, off_t *offset, off_t count) {
         if (timeout_idle) {
           pr_timer_reset(PR_TIMER_IDLE, ANY_MODULE);
         }
+      } else { /* (len == 0) */
+	/* unexpected EOF i.e. if the file is truncated while transfer */
+	break;
       }
 
       session.xfer.total_bytes += len;
