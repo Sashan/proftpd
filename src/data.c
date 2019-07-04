@@ -213,6 +213,7 @@ static int data_passive_open(const char *reason, off_t size) {
 static int data_active_open(const char *reason, off_t size) {
   conn_t *c;
   int bind_port, rev;
+  int retries = 0;
   const pr_netaddr_t *bind_addr = NULL;
   unsigned char *root_revoke = NULL;
 
@@ -268,6 +269,7 @@ static int data_active_open(const char *reason, off_t size) {
     }
   }
 
+  for(;;) { /* begin of endless loop */
   session.d = pr_inet_create_conn(session.pool, -1, bind_addr, bind_port, TRUE);
   if (session.d == NULL) {
     int xerrno = errno;
@@ -309,7 +311,7 @@ static int data_active_open(const char *reason, off_t size) {
     pr_inet_set_socket_opts(session.d->pool, session.d,
       (main_server->tcp_rcvbuf_override ? main_server->tcp_rcvbuf_len : 0), 0,
       main_server->tcp_keepalive);
-    
+
   } else {
     pr_inet_set_socket_opts(session.d->pool, session.d,
       0, (main_server->tcp_sndbuf_override ? main_server->tcp_sndbuf_len : 0),
@@ -328,6 +330,13 @@ static int data_active_open(const char *reason, off_t size) {
       session.data_port) < 0) {
     int xerrno = session.d->xerrno;
 
+    if (xerrno == EADDRINUSE && retries < 16) {
+      destroy_pool(session.d->pool);
+      pr_signals_handle();
+      /* Wait up to MSL to avoid TIME_WAIT. */
+      sleep(retries++);
+      continue; /* continue in endless loop */
+    }
     pr_log_debug(DEBUG6,
       "Error connecting to %s#%u for active data transfer: %s",
       pr_netaddr_get_ipstr(&session.data_addr), session.data_port,
@@ -340,7 +349,8 @@ static int data_active_open(const char *reason, off_t size) {
 
     errno = xerrno;
     return -1;
-  }
+  } else break; /* finish the endless loop */
+  } /* end of endless loop */
 
   c = pr_inet_openrw(session.pool, session.d, NULL, PR_NETIO_STRM_DATA,
     session.d->listen_fd, -1, -1, TRUE);
