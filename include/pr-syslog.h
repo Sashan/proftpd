@@ -68,7 +68,7 @@
 #elif defined(__hpux)
 # define PR_PATH_LOG	"/dev/log.un"
 #else
-# define PR_PATH_LOG	"/dev/log"
+# define PR_PATH_LOG	"/dev/conslog"
 #endif
 
 /* Close desriptor used to write to system logger. */
