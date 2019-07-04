@@ -2031,6 +2031,8 @@ static int dolist(cmd_rec *cmd, const char *opt, int clearflags) {
         pr_response_add(R_226, _("Read error during globbing of %s"),
           pr_fs_encode_path(cmd->tmp_pool, arg));
 
+      } else if (a == GLOB_LIMIT) {
+        pr_response_add(R_226, _("Too many files"));
       } else if (a != GLOB_NOMATCH) {
         pr_response_add(R_226, _("Unknown error during globbing of %s"),
           pr_fs_encode_path(cmd->tmp_pool, arg));
@@ -2877,7 +2879,10 @@ MODRET ls_nlst(cmd_rec *cmd) {
           return PR_HANDLED(cmd);
         }
 
-        pr_response_add_err(R_450, _("No files found"));
+        if (res == GLOB_LIMIT)
+          pr_response_add_err(R_451, _("Too many files"));
+        else
+          pr_response_add_err(R_450, _("No files found"));
         return PR_ERROR(cmd);
       }
     }
