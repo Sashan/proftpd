@@ -58,6 +58,35 @@
 /* Account has been disabled */
 #define PR_AUTH_DISABLEDPWD		-5
 
+/* Insufficient credentials */
+#define PR_AUTH_CRED_INSUFF		-6
+
+/* Unavailable user credentials */
+#define PR_AUTH_CRED_UNAVAIL		-7
+
+/* Failure setting user credentials */
+#define PR_AUTH_CRED_ERR		-8
+
+/* Unavailable authentication service */
+#define PR_AUTH_UNAVAIL			-9
+
+/* Max retries reached */
+#define PR_AUTH_MAXTRIES		-10
+
+/* Initialization of authentization failed */
+#define PR_AUTH_INIT_FAIL		-11
+
+/* New auth token needed */
+#define PR_AUTH_NEWTOK			-12
+
+#define PR_AUTH_OPEN_ERR		-15
+#define PR_AUTH_SYMBOL_ERR		-16
+#define PR_AUTH_SERVICE_ERR		-17
+#define PR_AUTH_SYSTEM_ERR		-18
+#define PR_AUTH_BUF_ERR			-19
+#define PR_AUTH_CONV_ERR		-20
+#define PR_AUTH_PERM_DENIED		-21
+
 void pr_auth_setpwent(pool *);
 void pr_auth_endpwent(pool *);
 void pr_auth_setgrent(pool *);

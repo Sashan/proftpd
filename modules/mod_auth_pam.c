@@ -381,6 +381,24 @@ MODRET pam_auth(cmd_rec *cmd) {
 
   if (pam_error != PAM_SUCCESS) {
     switch (pam_error) {
+#ifdef PAM_CRED_INSUFFICIENT
+      case PAM_CRED_INSUFFICIENT:
+        retval = PR_AUTH_CRED_INSUFF;
+        break;
+#endif /* PAM_CRED_INSUFFICIENT */
+
+#ifdef PAM_AUTHINFO_UNAVAIL
+      case PAM_AUTHINFO_UNAVAIL:
+        retval = PR_AUTH_UNAVAIL;
+        break;
+#endif /* PAM_AUTHINFO_UNAVAIL */
+
+#ifdef PAM_MAXTRIES
+      case PAM_MAXTRIES:
+        retval = PR_AUTH_MAXTRIES;
+        break;
+#endif /* PAM_MAXTRIES */
+
       case PAM_USER_UNKNOWN:
         retval = PR_AUTH_NOPWD;
         break;
@@ -405,6 +423,14 @@ MODRET pam_auth(cmd_rec *cmd) {
 
   if (pam_error != PAM_SUCCESS) {
     switch (pam_error) {
+#ifdef PAM_NEW_AUTHTOK_REQD
+      case PAM_NEW_AUTHTOK_REQD:
+        pr_trace_msg(trace_channel, 8,
+          "account mgmt error: PAM_NEW_AUTH_REQD");
+        retval = PR_AUTH_NEWTOK;
+        break;
+#endif /* PAM_NEW_AUTHTOK_REQD */
+
 #ifdef PAM_AUTHTOKEN_REQD
       case PAM_AUTHTOKEN_REQD:
         pr_trace_msg(trace_channel, 8,
@@ -449,7 +475,7 @@ MODRET pam_auth(cmd_rec *cmd) {
     switch (pam_error) {
       case PAM_SESSION_ERR:
       default:
-        retval = PR_AUTH_DISABLEDPWD;
+        retval = PR_AUTH_INIT_FAIL;
         break;
     }
 
@@ -467,6 +493,20 @@ MODRET pam_auth(cmd_rec *cmd) {
 
   if (pam_error != PAM_SUCCESS) {
     switch (pam_error) {
+#ifdef PAM_CRED_UNAVAIL
+      case PAM_CRED_UNAVAIL:
+        pr_trace_msg(trace_channel, 8, "credentials error: PAM_CRED_UNAVAIL");
+        retval = PR_AUTH_CRED_UNAVAIL;
+        break;
+#endif /* PAM_CRED_UNAVAIL */
+
+#ifdef PAM_CRED_ERR
+      case PAM_CRED_ERR:
+        pr_trace_msg(trace_channel, 8, "credentials error: PAM_CRED_ERR");
+        retval = PR_AUTH_CRED_ERR;
+        break;
+#endif /* PAM_CRED_ERR */
+
       case PAM_CRED_EXPIRED:
         pr_trace_msg(trace_channel, 8, "credentials error: PAM_CRED_EXPIRED");
         retval = PR_AUTH_AGEPWD;
