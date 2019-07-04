@@ -31,6 +31,11 @@
 #ifndef PR_DATACONN_H
 #define PR_DATACONN_H
 
+/* Toggles whether to actually perform ASCII translation during the data
+ * transfer.
+ */
+int pr_data_ignore_ascii(int);
+
 void pr_data_init(char *, int);
 void pr_data_cleanup(void);
 int pr_data_open(char *, char *, int, off_t);
@@ -39,6 +44,7 @@ void pr_data_abort(int, int);
 int pr_data_xfer(char *, size_t);
 void pr_data_reset(void);
 void pr_data_set_linger(long);
+
 
 /* Clear the session.xfer.p pool, if present, and reset any associated
  * state.

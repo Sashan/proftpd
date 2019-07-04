@@ -40,6 +40,9 @@
 
 static const char *trace_channel = "data";
 
+#define PR_DATA_OPT_IGNORE_ASCII	0x0001
+static unsigned long data_opts = 0UL;
+
 /* local macro */
 
 #define MODE_STRING	(session.sf_flags & (SF_ASCII|SF_ASCII_OVERRIDE) ? \
@@ -588,6 +591,33 @@ void pr_data_reset(void) {
 
   session.d = NULL;
   session.sf_flags &= (SF_ALL^(SF_ABORT|SF_POST_ABORT|SF_XFER|SF_PASSIVE|SF_ASCII_OVERRIDE|SF_EPSV_ALL));
+}
+
+int pr_data_ignore_ascii(int ignore_ascii) {
+  int res;
+
+  if (ignore_ascii != TRUE &&
+      ignore_ascii != FALSE) {
+    errno = EINVAL;
+    return -1;
+  }
+
+  if (data_opts & PR_DATA_OPT_IGNORE_ASCII) {
+    if (!ignore_ascii) {
+      data_opts &= ~PR_DATA_OPT_IGNORE_ASCII;
+    }
+
+    res = TRUE;
+
+    } else {
+      if (ignore_ascii) {
+        data_opts |= PR_DATA_OPT_IGNORE_ASCII;
+      }
+
+      res = FALSE;
+    }
+
+  return res;
 }
 
 void pr_data_init(char *filename, int direction) {
@@ -1165,7 +1195,15 @@ int pr_data_xfer(char *cl_buf, size_t cl_size) {
     char *buf = session.xfer.buf;
     pr_buffer_t *pbuf;
 
-    if (session.sf_flags & (SF_ASCII|SF_ASCII_OVERRIDE)) {
+    /* We use ASCII translation if:
+     *
+     * - SF_ASCII_OVERRIDE session flag is set (e.g. for LIST/NLST)
+     * - SF_ASCII session flag is set, AND IGNORE_ASCII data opt NOT set
+     */
+    if ((session.sf_flags & SF_ASCII_OVERRIDE) ||
+	((session.sf_flags & SF_ASCII) &&
+	 !(data_opts & PR_DATA_OPT_IGNORE_ASCII))) {
+
       int adjlen, buflen;
 
       do {
@@ -1340,8 +1378,14 @@ int pr_data_xfer(char *cl_buf, size_t cl_size) {
 
       /* Fill up our internal buffer. */
       memcpy(session.xfer.buf, cl_buf, buflen);
-
-      if (session.sf_flags & (SF_ASCII|SF_ASCII_OVERRIDE)) {
+    /* We use ASCII translation if:
+     *
+     * - SF_ASCII_OVERRIDE session flag is set (e.g. for LIST/NLST)
+     * - SF_ASCII session flag is set, AND IGNORE_ASCII data opt NOT set
+     */
+     if ((session.sf_flags & SF_ASCII_OVERRIDE) ||
+	 ((session.sf_flags & SF_ASCII) &&
+	  !(data_opts & PR_DATA_OPT_IGNORE_ASCII))) {
         /* Scan the internal buffer, looking for LFs with no preceding CRs.
          * Add CRs (and expand the internal buffer) as necessary. xferbuflen
          * will be adjusted so that it contains the length of data in
