@@ -4773,6 +4773,7 @@ MODRET core_rmd(cmd_rec *cmd) {
   dir = dir_canonical_path(cmd->tmp_pool, dir);
   if (dir == NULL) {
     int xerrno = EINVAL;
+    cmd->error_code = EINVAL;
 
     pr_response_add_err(R_550, "%s: %s", cmd->arg, strerror(xerrno));
 
@@ -4782,6 +4783,7 @@ MODRET core_rmd(cmd_rec *cmd) {
 
   if (!dir_check_canon(cmd->tmp_pool, cmd, cmd->group, dir, NULL)) {
     int xerrno = EACCES;
+    cmd->error_code = EACCES;
 
     pr_response_add_err(R_550, "%s: %s", cmd->arg, strerror(xerrno));
 
@@ -4791,6 +4793,7 @@ MODRET core_rmd(cmd_rec *cmd) {
 
   if (pr_fsio_rmdir(dir) < 0) {
     int xerrno = errno;
+    cmd->error_code = errno;
 
     (void) pr_trace_msg("fileperms", 1, "%s, user '%s' (UID %lu, GID %lu): "
       "error removing directory '%s': %s", cmd->argv[0], session.user,
@@ -4847,6 +4850,7 @@ MODRET core_mkd(cmd_rec *cmd) {
   dir = dir_canonical_path(cmd->tmp_pool, dir);
   if (dir == NULL) {
     int xerrno = EINVAL;
+    cmd->error_code = EINVAL;
 
     pr_response_add_err(R_550, "%s: %s", cmd->arg, strerror(xerrno));
 
@@ -4856,6 +4860,7 @@ MODRET core_mkd(cmd_rec *cmd) {
 
   if (!dir_check_canon(cmd->tmp_pool, cmd, cmd->group, dir, NULL)) {
     int xerrno = EACCES;
+    cmd->error_code = EACCES;
 
     pr_log_debug(DEBUG8, "%s command denied by <Limit> config", cmd->argv[0]);
     pr_response_add_err(R_550, "%s: %s", cmd->arg, strerror(xerrno));
@@ -4867,6 +4872,7 @@ MODRET core_mkd(cmd_rec *cmd) {
   if (pr_fsio_smkdir(cmd->tmp_pool, dir, 0777, session.fsuid,
       session.fsgid) < 0) {
     int xerrno = errno;
+    cmd->error_code = errno;
 
     (void) pr_trace_msg("fileperms", 1, "%s, user '%s' (UID %lu, GID %lu): "
       "error making directory '%s': %s", cmd->argv[0], session.user,
@@ -4913,6 +4919,7 @@ MODRET core_mdtm(cmd_rec *cmd) {
       !dir_check(cmd->tmp_pool, cmd, cmd->group, path, NULL) ||
       pr_fsio_stat(path, &st) == -1) {
     int xerrno = errno;
+    cmd->error_code = errno;
 
     pr_response_add_err(R_550, "%s: %s", cmd->arg, strerror(xerrno));
 
@@ -5024,6 +5031,7 @@ MODRET core_dele(cmd_rec *cmd) {
   path = dir_canonical_path(cmd->tmp_pool, path);
   if (path == NULL) {
     int xerrno = ENOENT;
+    cmd->error_code = ENOENT;
 
     pr_response_add_err(R_550, "%s: %s", cmd->arg, strerror(xerrno));
 
@@ -5033,6 +5041,7 @@ MODRET core_dele(cmd_rec *cmd) {
 
   if (!dir_check(cmd->tmp_pool, cmd, cmd->group, path, NULL)) {
     int xerrno = errno;
+    cmd->error_code = errno;
 
     pr_log_debug(DEBUG7, "deleting '%s' denied by <Limit> configuration", path);
     pr_response_add_err(R_550, "%s: %s", cmd->arg, strerror(xerrno));
@@ -5049,6 +5058,7 @@ MODRET core_dele(cmd_rec *cmd) {
   pr_fs_clear_cache();
   if (pr_fsio_lstat(path, &st) < 0) {
     int xerrno = errno;
+    cmd->error_code = errno;
 
     pr_log_debug(DEBUG3, "unable to lstat '%s': %s", path, strerror(xerrno));
     pr_response_add_err(R_550, "%s: %s", cmd->arg, strerror(xerrno));
@@ -5063,6 +5073,7 @@ MODRET core_dele(cmd_rec *cmd) {
    */
   if (S_ISDIR(st.st_mode)) {
     int xerrno = EISDIR;
+    cmd->error_code = EISDIR;
 
     (void) pr_trace_msg("fileperms", 1, "%s, user '%s' (UID %lu, GID %lu): "
       "error deleting '%s': %s", cmd->argv[0], session.user,
@@ -5079,6 +5090,7 @@ MODRET core_dele(cmd_rec *cmd) {
  
   if (pr_fsio_unlink(path) < 0) {
     int xerrno = errno;
+    cmd->error_code = errno;
 
     (void) pr_trace_msg("fileperms", 1, "%s, user '%s' (UID %lu, GID %lu): "
       "error deleting '%s': %s", cmd->argv[0], session.user,
@@ -5163,6 +5175,7 @@ MODRET core_rnto(cmd_rec *cmd) {
     pr_log_debug(DEBUG6, "AllowOverwrite denied permission for %s", path);
     pr_response_add_err(R_550, _("%s: Rename permission denied"), cmd->arg);
     errno = EACCES;
+    cmd->error_code = EACCES;
     return PR_ERROR(cmd);
   }
 
@@ -5170,6 +5183,7 @@ MODRET core_rnto(cmd_rec *cmd) {
       !dir_check_canon(cmd->tmp_pool, cmd, cmd->group, path, NULL) ||
       pr_fsio_rename(session.xfer.path, path) == -1) {
     int xerrno = errno;
+    cmd->error_code = errno;
 
     if (xerrno != EXDEV) {
       (void) pr_trace_msg("fileperms", 1, "%s, user '%s' (UID %lu, GID %lu): "
@@ -5221,6 +5235,7 @@ MODRET core_rnto(cmd_rec *cmd) {
      */
     if (pr_fs_copy_file(session.xfer.path, path) < 0) {
       xerrno = errno;
+      cmd->error_code = errno;
 
       (void) pr_trace_msg("fileperms", 1, "%s, user '%s' (UID %lu, GID %lu): "
         "error copying '%s' to '%s': %s", cmd->argv[0], session.user,
@@ -5236,6 +5251,8 @@ MODRET core_rnto(cmd_rec *cmd) {
 
     /* Once copied, unlink the original file. */
     if (pr_fsio_unlink(session.xfer.path) < 0) {
+      cmd->error_code = errno;
+
       pr_log_debug(DEBUG0, "error unlinking '%s': %s", session.xfer.path,
         strerror(errno));
     }
@@ -5293,6 +5310,7 @@ MODRET core_rnfr(cmd_rec *cmd) {
       !dir_check(cmd->tmp_pool, cmd, cmd->group, path, NULL) ||
       !exists(path)) {
     int xerrno = errno;
+    cmd->error_code = errno;
 
     pr_response_add_err(R_550, "%s: %s", cmd->arg, strerror(xerrno));
 

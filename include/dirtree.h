@@ -127,6 +127,10 @@ typedef struct cmd_struc {
 
   int cmd_id;			/* Index into commands list, for faster comparisons */
 
+  int error_code;		/* Stores errno of failed file transfer commands.
+				 * Required for Solaris auditing.
+				 */
+
   /* If we detect that the client sent commands for a protocol OTHER than
    * FTP, then this field will be FALSE; the protocol field will identify
    * the detected protocol.
